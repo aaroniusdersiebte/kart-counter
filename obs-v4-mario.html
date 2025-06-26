@@ -1,0 +1,850 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mario Kart Challenge - OBS Display v4 🏁</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Fredoka+One:wght@400&family=Nunito:wght@600;700;800&display=swap');
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Nunito', sans-serif;
+            background: transparent;
+            color: #ffffff;
+            overflow: hidden;
+            width: 100vw;
+            height: 100vh;
+            position: relative;
+        }
+
+
+
+        /* Notification Container */
+        .notification-container {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%) scale(0.8);
+            width: 500px;
+            height: 700px;
+            opacity: 0;
+            pointer-events: none;
+            transition: all 0.6s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+            z-index: 100;
+        }
+
+        .notification-container.show {
+            opacity: 1;
+            transform: translate(-50%, -50%) scale(1);
+        }
+
+        .challenge-display {
+            background: linear-gradient(135deg, 
+                rgba(0, 0, 0, 0.95) 0%, 
+                rgba(30, 30, 30, 0.95) 50%, 
+                rgba(0, 0, 0, 0.95) 100%);
+            border-radius: 25px;
+            border: 4px solid;
+            border-image: linear-gradient(45deg, #FFD700, #FF6B6B, #4ECDC4, #45B7D1) 1;
+            box-shadow: 
+                0 0 50px rgba(255, 215, 0, 0.6),
+                inset 0 0 30px rgba(255, 255, 255, 0.1);
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            padding: 30px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        /* Mario Kart Header */
+        .mario-header {
+            text-align: center;
+            margin-bottom: 25px;
+            position: relative;
+        }
+
+        .mario-title {
+            font-family: 'Fredoka One', cursive;
+            font-size: 28px;
+            background: linear-gradient(45deg, #FFD700, #FF6B6B, #4ECDC4);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            text-shadow: 2px 2px 0px rgba(0, 0, 0, 0.5);
+            margin-bottom: 15px;
+            animation: title-bounce 2s ease-in-out infinite;
+        }
+
+        @keyframes title-bounce {
+            0%, 100% { transform: translateY(0px); }
+            50% { transform: translateY(-5px); }
+        }
+
+        .mario-stats {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 16px;
+            background: linear-gradient(90deg, 
+                rgba(255, 107, 107, 0.2) 0%, 
+                rgba(255, 215, 0, 0.2) 50%, 
+                rgba(78, 205, 196, 0.2) 100%);
+            padding: 12px 20px;
+            border-radius: 15px;
+            border: 2px solid rgba(255, 215, 0, 0.3);
+        }
+
+        .mario-stat {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-weight: 700;
+        }
+
+        .stat-icon {
+            font-size: 20px;
+            animation: icon-spin 3s ease-in-out infinite;
+        }
+
+        @keyframes icon-spin {
+            0%, 100% { transform: rotate(0deg) scale(1); }
+            50% { transform: rotate(10deg) scale(1.1); }
+        }
+
+        .stat-value {
+            color: #FFD700;
+            font-weight: 800;
+            text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8);
+        }
+
+        /* Kart Display Area */
+        .kart-area {
+            flex: 1;
+            position: relative;
+            overflow: hidden;
+            border-radius: 20px;
+            background: linear-gradient(135deg, 
+                rgba(255, 107, 107, 0.1) 0%, 
+                rgba(78, 205, 196, 0.1) 50%, 
+                rgba(255, 215, 0, 0.1) 100%);
+            border: 3px solid rgba(255, 215, 0, 0.4);
+            box-shadow: inset 0 0 30px rgba(255, 215, 0, 0.2);
+        }
+
+        .positions-scroll {
+            position: absolute;
+            width: 100%;
+            height: auto;
+            padding: 15px;
+            transition: transform 2s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+        }
+
+        /* Kart Position Items */
+        .kart-position {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 15px 20px;
+            margin: 8px 0;
+            border-radius: 15px;
+            font-weight: 700;
+            font-size: 18px;
+            position: relative;
+            overflow: hidden;
+            transition: all 0.4s ease;
+            border: 2px solid transparent;
+        }
+
+        .kart-position::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+            transition: left 0.6s ease;
+        }
+
+        .kart-position:hover::before {
+            left: 100%;
+        }
+
+        .kart-position.incomplete {
+            background: linear-gradient(135deg, 
+                rgba(255, 107, 107, 0.9) 0%, 
+                rgba(238, 90, 36, 0.9) 100%);
+            color: white;
+            border-left: 5px solid #c44569;
+            box-shadow: 0 4px 15px rgba(255, 107, 107, 0.3);
+        }
+
+        .kart-position.complete {
+            background: linear-gradient(135deg, 
+                rgba(78, 205, 196, 0.9) 0%, 
+                rgba(69, 183, 209, 0.9) 100%);
+            color: white;
+            border-left: 5px solid #2ed573;
+            box-shadow: 0 4px 15px rgba(78, 205, 196, 0.4);
+        }
+
+        .kart-position.achievement {
+            background: linear-gradient(135deg, 
+                rgba(255, 215, 0, 0.95) 0%, 
+                rgba(255, 165, 0, 0.95) 50%,
+                rgba(255, 215, 0, 0.95) 100%);
+            color: #000;
+            border: 3px solid #FF6347;
+            animation: kart-achievement 2s ease-in-out infinite;
+            transform: scale(1.08);
+            box-shadow: 
+                0 0 30px rgba(255, 215, 0, 0.8),
+                0 0 60px rgba(255, 215, 0, 0.4);
+            z-index: 10;
+        }
+
+        @keyframes kart-achievement {
+            0%, 100% { 
+                box-shadow: 
+                    0 0 30px rgba(255, 215, 0, 0.8),
+                    0 0 60px rgba(255, 215, 0, 0.4);
+                transform: scale(1.08);
+            }
+            50% { 
+                box-shadow: 
+                    0 0 50px rgba(255, 215, 0, 1),
+                    0 0 100px rgba(255, 215, 0, 0.6);
+                transform: scale(1.12);
+            }
+        }
+
+        .position-info {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .position-number {
+            font-size: 32px;
+            font-weight: 900;
+            font-family: 'Fredoka One', cursive;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.6);
+            min-width: 80px;
+        }
+
+        .status-check {
+            font-size: 28px;
+            font-weight: bold;
+        }
+
+        /* Achievement Banner */
+        .achievement-banner {
+            position: absolute;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: linear-gradient(45deg, 
+                rgba(255, 215, 0, 0.95) 0%, 
+                rgba(255, 165, 0, 0.95) 50%,
+                rgba(255, 215, 0, 0.95) 100%);
+            color: #000;
+            padding: 15px 30px;
+            border-radius: 25px;
+            font-size: 20px;
+            font-weight: 800;
+            text-align: center;
+            animation: achievement-banner-pulse 2s ease-in-out infinite;
+            box-shadow: 
+                0 0 30px rgba(255, 215, 0, 0.8),
+                0 4px 20px rgba(0, 0, 0, 0.3);
+            border: 3px solid #FF6347;
+        }
+
+        @keyframes achievement-banner-pulse {
+            0%, 100% { 
+                transform: translateX(-50%) scale(1); 
+                box-shadow: 
+                    0 0 30px rgba(255, 215, 0, 0.8),
+                    0 4px 20px rgba(0, 0, 0, 0.3);
+            }
+            50% { 
+                transform: translateX(-50%) scale(1.05); 
+                box-shadow: 
+                    0 0 50px rgba(255, 215, 0, 1),
+                    0 8px 30px rgba(0, 0, 0, 0.4);
+            }
+        }
+
+        /* Joker Usage Animation */
+        .joker-banner {
+            position: absolute;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: linear-gradient(45deg, 
+                rgba(138, 43, 226, 0.95) 0%, 
+                rgba(255, 20, 147, 0.95) 50%,
+                rgba(138, 43, 226, 0.95) 100%);
+            color: #fff;
+            padding: 15px 30px;
+            border-radius: 25px;
+            font-size: 18px;
+            font-weight: 800;
+            text-align: center;
+            animation: joker-banner-shake 1s ease-in-out infinite;
+            box-shadow: 
+                0 0 30px rgba(138, 43, 226, 0.8),
+                0 4px 20px rgba(0, 0, 0, 0.3);
+            border: 3px solid #FF1493;
+        }
+
+        @keyframes joker-banner-shake {
+            0%, 100% { 
+                transform: translateX(-50%) rotate(0deg) scale(1); 
+            }
+            25% { 
+                transform: translateX(-50%) rotate(-2deg) scale(1.02); 
+            }
+            75% { 
+                transform: translateX(-50%) rotate(2deg) scale(1.02); 
+            }
+        }
+
+        /* Game Status Overlay */
+        .game-status-overlay {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 32px;
+            font-weight: 800;
+            text-align: center;
+            padding: 30px 40px;
+            border-radius: 20px;
+            background: rgba(0, 0, 0, 0.95);
+            animation: status-glow 2s ease-in-out infinite;
+            border: 4px solid;
+            font-family: 'Fredoka One', cursive;
+        }
+
+        .game-status-overlay.completed {
+            color: #FFD700;
+            border-color: #FFD700;
+            text-shadow: 0 0 20px #FFD700;
+            box-shadow: 
+                0 0 50px rgba(255, 215, 0, 0.8),
+                0 0 100px rgba(255, 215, 0, 0.4);
+        }
+
+        .game-status-overlay.game-over {
+            color: #ff6b6b;
+            border-color: #ff6b6b;
+            text-shadow: 0 0 20px #ff6b6b;
+            box-shadow: 
+                0 0 50px rgba(255, 107, 107, 0.8),
+                0 0 100px rgba(255, 107, 107, 0.4);
+        }
+
+        @keyframes status-glow {
+            0%, 100% { opacity: 0.9; transform: translate(-50%, -50%) scale(1); }
+            50% { opacity: 1; transform: translate(-50%, -50%) scale(1.02); }
+        }
+
+
+
+        /* Particle Effects */
+        .particles {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            overflow: hidden;
+        }
+
+        .particle {
+            position: absolute;
+            width: 4px;
+            height: 4px;
+            background: #FFD700;
+            border-radius: 50%;
+            animation: particle-float 3s ease-in-out infinite;
+        }
+
+        @keyframes particle-float {
+            0% {
+                transform: translateY(100vh) scale(0);
+                opacity: 0;
+            }
+            10% {
+                opacity: 1;
+            }
+            90% {
+                opacity: 1;
+            }
+            100% {
+                transform: translateY(-100px) scale(1);
+                opacity: 0;
+            }
+        }
+
+        /* Responsive Design */
+        @media (max-width: 1200px) {
+            .notification-container {
+                width: 450px;
+                height: 600px;
+            }
+            
+            .mario-title {
+                font-size: 24px;
+            }
+            
+            .kart-position {
+                font-size: 16px;
+                padding: 12px 16px;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    
+    <div class="notification-container" id="notificationContainer">
+        <div class="challenge-display">
+            <div class="mario-header">
+                <div class="mario-title">🏁 MARIO KART CHALLENGE 🏁</div>
+                <div class="mario-stats">
+                    <div class="mario-stat">
+                        <span class="stat-icon">🏆</span>
+                        <span>Plätze: <span class="stat-value" id="completed">0</span>/24</span>
+                    </div>
+                    <div class="mario-stat">
+                        <span class="stat-icon">🃏</span>
+                        <span>Joker: <span class="stat-value" id="jokers">3</span></span>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="kart-area">
+                <div class="positions-scroll" id="positionsScroll">
+                    <!-- Kart positions werden hier generiert -->
+                </div>
+                
+                <div class="particles" id="particles"></div>
+            </div>
+
+            <div class="achievement-banner" id="achievementBanner" style="display: none;">
+                🎉 Platz X erreicht! 🎉
+            </div>
+
+            <div class="joker-banner" id="jokerBanner" style="display: none;">
+                🃏 JOKER VERWENDET! 🃏
+            </div>
+
+            <div class="game-status-overlay" id="gameStatusOverlay" style="display: none;">
+                Status Text
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = 'http://localhost:8080/api';
+        let currentGameState = null;
+        let isVisible = false;
+        let hideTimeout = null;
+        let isConnected = false;
+        let lastJokerCount = null;
+
+
+
+        // Connection status tracking
+        function updateConnectionStatus(connected) {
+            isConnected = connected;
+            // Connection status removed for minimal design
+        }
+
+        async function loadGameState() {
+            try {
+                const response = await fetch(`${API_BASE}/gamestate?t=${Date.now()}`);
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}`);
+                }
+                
+                const gameState = await response.json();
+                updateConnectionStatus(true);
+                
+                if (!currentGameState || JSON.stringify(currentGameState) !== JSON.stringify(gameState)) {
+                    const previousState = currentGameState;
+                    currentGameState = gameState;
+                    
+                    // Check for joker usage
+                    if (previousState && gameState.jokers < previousState.jokers) {
+                        console.log('Joker verwendet! Joker:', previousState.jokers, '->', gameState.jokers);
+                        showJokerAnimation();
+                    }
+                    // Check for new achievement
+                    else if (previousState && gameState.lastAchievement && 
+                            gameState.lastAchievement !== previousState.lastAchievement) {
+                        console.log('New achievement detected:', gameState.lastAchievement);
+                        showAchievementAnimation(gameState.lastAchievement);
+                    } 
+                    // Check for game status change
+                    else if (gameState.gameStatus !== 'running' && 
+                            (!previousState || previousState.gameStatus === 'running')) {
+                        console.log('Game status changed:', gameState.gameStatus);
+                        showGameStatusAnimation(gameState.gameStatus);
+                    }
+                    
+                    updateDisplay(gameState);
+                }
+            } catch (error) {
+                console.log('Connection error:', error.message);
+                updateConnectionStatus(false);
+            }
+        }
+
+        function updateDisplay(gameState) {
+            document.getElementById('completed').textContent = gameState.completedPositions.length;
+            document.getElementById('jokers').textContent = gameState.jokers;
+            
+            generateKartPositions(gameState);
+            createParticles();
+        }
+
+        function generateKartPositions(gameState) {
+            const container = document.getElementById('positionsScroll');
+            container.innerHTML = '';
+            
+            // Alle Plätze von 24 nach 1 (von unten nach oben)
+            for (let i = 24; i >= 1; i--) {
+                const kartDiv = document.createElement('div');
+                kartDiv.className = 'kart-position';
+                kartDiv.dataset.position = i;
+                
+                const isCompleted = gameState.completedPositions.includes(i);
+                const isAchievement = gameState.lastAchievement === i && isVisible;
+                
+                if (isAchievement) {
+                    kartDiv.classList.add('achievement');
+                } else if (isCompleted) {
+                    kartDiv.classList.add('complete');
+                } else {
+                    kartDiv.classList.add('incomplete');
+                }
+                
+                const status = isCompleted ? '✅' : '⭕';
+                
+                kartDiv.innerHTML = `
+                    <div class="position-info">
+                        <span class="position-number">${i}</span>
+                    </div>
+                    <div style="display: flex; align-items: center;">
+                        <span class="status-check">${status}</span>
+                    </div>
+                `;
+                
+                container.appendChild(kartDiv);
+            }
+        }
+
+        function showJokerAnimation() {
+            const container = document.getElementById('notificationContainer');
+            const jokerBanner = document.getElementById('jokerBanner');
+            const achievementBanner = document.getElementById('achievementBanner');
+            const gameStatusOverlay = document.getElementById('gameStatusOverlay');
+            
+            console.log('Showing joker animation');
+            
+            // Zeige Notification
+            isVisible = true;
+            container.classList.add('show');
+            
+            // Update Joker Banner
+            jokerBanner.innerHTML = `🃏 JOKER VERWENDET! 🃏<br><small>Verbleibend: ${currentGameState.jokers}</small>`;
+            jokerBanner.style.display = 'block';
+            achievementBanner.style.display = 'none';
+            gameStatusOverlay.style.display = 'none';
+            
+            // Regenerate list
+            generateKartPositions(currentGameState);
+            
+            // Erstelle spezielle Joker-Partikel
+            createJokerParticles();
+            
+            // Verstecke nach 4 Sekunden
+            clearTimeout(hideTimeout);
+            hideTimeout = setTimeout(() => {
+                hideNotification();
+            }, 4000);
+        }
+
+        function showAchievementAnimation(position) {
+            const container = document.getElementById('notificationContainer');
+            const achievementBanner = document.getElementById('achievementBanner');
+            const jokerBanner = document.getElementById('jokerBanner');
+            const gameStatusOverlay = document.getElementById('gameStatusOverlay');
+            
+            console.log('Showing achievement animation for position:', position);
+            
+            // Zeige Notification
+            isVisible = true;
+            container.classList.add('show');
+            
+            // Update Achievement Banner
+            achievementBanner.innerHTML = `🎉 Platz ${position} erreicht! 🎉`;
+            achievementBanner.style.display = 'block';
+            jokerBanner.style.display = 'none';
+            gameStatusOverlay.style.display = 'none';
+            
+            // Regenerate list with achievement highlighting
+            generateKartPositions(currentGameState);
+            
+            // Scroll zum Achievement
+            setTimeout(() => {
+                scrollToPosition(position);
+            }, 300);
+            
+            // Erstelle Achievement-Partikel
+            createAchievementParticles();
+            
+            // Verstecke nach 6 Sekunden
+            clearTimeout(hideTimeout);
+            hideTimeout = setTimeout(() => {
+                hideNotification();
+            }, 6000);
+        }
+
+        function showGameStatusAnimation(status) {
+            const container = document.getElementById('notificationContainer');
+            const achievementBanner = document.getElementById('achievementBanner');
+            const jokerBanner = document.getElementById('jokerBanner');
+            const gameStatusOverlay = document.getElementById('gameStatusOverlay');
+            
+            console.log('Showing game status animation:', status);
+            
+            isVisible = true;
+            container.classList.add('show');
+            
+            achievementBanner.style.display = 'none';
+            jokerBanner.style.display = 'none';
+            gameStatusOverlay.style.display = 'block';
+            gameStatusOverlay.className = 'game-status-overlay ' + status;
+            
+            if (status === 'completed') {
+                gameStatusOverlay.textContent = '🏆 CHALLENGE ABGESCHLOSSEN! 🏆';
+                createCelebrationParticles();
+            } else if (status === 'game-over') {
+                gameStatusOverlay.textContent = '💀 GAME OVER 💀';
+                createGameOverParticles();
+            }
+            
+            // Verstecke nach 10 Sekunden
+            clearTimeout(hideTimeout);
+            hideTimeout = setTimeout(() => {
+                hideNotification();
+            }, 10000);
+        }
+
+        function scrollToPosition(position) {
+            const container = document.getElementById('positionsScroll');
+            const target = container.querySelector(`[data-position="${position}"]`);
+            
+            if (target) {
+                const containerHeight = container.parentElement.clientHeight;
+                const targetOffset = target.offsetTop;
+                const scrollTo = targetOffset - (containerHeight / 2) + (target.clientHeight / 2);
+                
+                container.style.transform = `translateY(-${Math.max(0, scrollTo)}px)`;
+            }
+        }
+
+        function hideNotification() {
+            const container = document.getElementById('notificationContainer');
+            const achievementBanner = document.getElementById('achievementBanner');
+            const jokerBanner = document.getElementById('jokerBanner');
+            const gameStatusOverlay = document.getElementById('gameStatusOverlay');
+            
+            console.log('Hiding notification');
+            
+            isVisible = false;
+            container.classList.remove('show');
+            achievementBanner.style.display = 'none';
+            jokerBanner.style.display = 'none';
+            gameStatusOverlay.style.display = 'none';
+            
+            // Reset scroll position after hide animation
+            setTimeout(() => {
+                document.getElementById('positionsScroll').style.transform = 'translateY(0)';
+                // Remove achievement highlighting
+                if (currentGameState) {
+                    generateKartPositions(currentGameState);
+                }
+                // Clear particles
+                document.getElementById('particles').innerHTML = '';
+            }, 600);
+        }
+
+        // Particle Systems
+        function createParticles() {
+            const container = document.getElementById('particles');
+            container.innerHTML = '';
+            
+            // Standard floating particles
+            for (let i = 0; i < 15; i++) {
+                setTimeout(() => {
+                    const particle = document.createElement('div');
+                    particle.className = 'particle';
+                    particle.style.left = Math.random() * 100 + '%';
+                    particle.style.animationDelay = Math.random() * 3 + 's';
+                    particle.style.animationDuration = (3 + Math.random() * 2) + 's';
+                    container.appendChild(particle);
+                    
+                    setTimeout(() => {
+                        if (particle.parentNode) {
+                            particle.remove();
+                        }
+                    }, 6000);
+                }, i * 200);
+            }
+        }
+
+        function createAchievementParticles() {
+            const container = document.getElementById('particles');
+            
+            // Golden achievement particles
+            for (let i = 0; i < 30; i++) {
+                setTimeout(() => {
+                    const particle = document.createElement('div');
+                    particle.className = 'particle';
+                    particle.style.left = Math.random() * 100 + '%';
+                    particle.style.background = ['#FFD700', '#FFA500', '#FF6347'][Math.floor(Math.random() * 3)];
+                    particle.style.width = (4 + Math.random() * 6) + 'px';
+                    particle.style.height = particle.style.width;
+                    particle.style.animationDelay = Math.random() * 1 + 's';
+                    particle.style.animationDuration = (2 + Math.random() * 1) + 's';
+                    container.appendChild(particle);
+                    
+                    setTimeout(() => {
+                        if (particle.parentNode) {
+                            particle.remove();
+                        }
+                    }, 4000);
+                }, i * 50);
+            }
+        }
+
+        function createJokerParticles() {
+            const container = document.getElementById('particles');
+            
+            // Purple joker particles
+            for (let i = 0; i < 25; i++) {
+                setTimeout(() => {
+                    const particle = document.createElement('div');
+                    particle.className = 'particle';
+                    particle.style.left = Math.random() * 100 + '%';
+                    particle.style.background = ['#8A2BE2', '#FF1493', '#9932CC'][Math.floor(Math.random() * 3)];
+                    particle.style.width = (3 + Math.random() * 5) + 'px';
+                    particle.style.height = particle.style.width;
+                    particle.style.animationDelay = Math.random() * 0.5 + 's';
+                    particle.style.animationDuration = (1.5 + Math.random() * 1) + 's';
+                    container.appendChild(particle);
+                    
+                    setTimeout(() => {
+                        if (particle.parentNode) {
+                            particle.remove();
+                        }
+                    }, 3000);
+                }, i * 30);
+            }
+        }
+
+        function createCelebrationParticles() {
+            const container = document.getElementById('particles');
+            
+            // Rainbow celebration particles
+            const colors = ['#FFD700', '#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4', '#FFEAA7'];
+            
+            for (let i = 0; i < 50; i++) {
+                setTimeout(() => {
+                    const particle = document.createElement('div');
+                    particle.className = 'particle';
+                    particle.style.left = Math.random() * 100 + '%';
+                    particle.style.background = colors[Math.floor(Math.random() * colors.length)];
+                    particle.style.width = (5 + Math.random() * 8) + 'px';
+                    particle.style.height = particle.style.width;
+                    particle.style.animationDelay = Math.random() * 2 + 's';
+                    particle.style.animationDuration = (3 + Math.random() * 2) + 's';
+                    container.appendChild(particle);
+                    
+                    setTimeout(() => {
+                        if (particle.parentNode) {
+                            particle.remove();
+                        }
+                    }, 6000);
+                }, i * 40);
+            }
+        }
+
+        function createGameOverParticles() {
+            const container = document.getElementById('particles');
+            
+            // Dark red particles for game over
+            for (let i = 0; i < 20; i++) {
+                setTimeout(() => {
+                    const particle = document.createElement('div');
+                    particle.className = 'particle';
+                    particle.style.left = Math.random() * 100 + '%';
+                    particle.style.background = ['#ff6b6b', '#ee5a24', '#c44569'][Math.floor(Math.random() * 3)];
+                    particle.style.width = (3 + Math.random() * 4) + 'px';
+                    particle.style.height = particle.style.width;
+                    particle.style.animationDelay = Math.random() * 1 + 's';
+                    particle.style.animationDuration = (2 + Math.random() * 1.5) + 's';
+                    container.appendChild(particle);
+                    
+                    setTimeout(() => {
+                        if (particle.parentNode) {
+                            particle.remove();
+                        }
+                    }, 4000);
+                }, i * 100);
+            }
+        }
+
+        // OBS-spezifische Events (falls verfügbar)
+        if (window.obsstudio) {
+            console.log('OBS Studio detected');
+            
+            window.addEventListener('obsSourceVisibleChanged', function(event) {
+                console.log('OBS visibility changed:', event.detail.visible);
+                if (!event.detail.visible && isVisible) {
+                    hideNotification();
+                }
+            });
+        }
+
+        // Polling starten
+        const pollInterval = setInterval(loadGameState, 1000);
+        
+        // Initial load
+        loadGameState();
+        
+        // Cleanup on page unload
+        window.addEventListener('beforeunload', () => {
+            clearInterval(pollInterval);
+            clearTimeout(hideTimeout);
+        });
+        
+        console.log('🏁 Mario Kart Challenge - OBS Display v4 loaded! 🏁');
+        console.log('Server URL:', API_BASE);
+    </script>
+</body>
+</html>
